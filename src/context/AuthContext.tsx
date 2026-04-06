@@ -11,7 +11,8 @@ interface AuthContextData {
   signed: boolean;
   user: User | null;
   loading: boolean;
-  signIn(apiKey: string): Promise<void>;
+  requestOtp(phone: string): Promise<void>;
+  verifyOtp(phone: string, code: string): Promise<void>;
   signOut(): void;
 }
 
@@ -31,9 +32,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  async function signIn(apiKey: string) {
+  async function requestOtp(phone: string) {
     try {
-      const response = await api.post('/v1/auth/login', { apiKey });
+      await api.post('/v1/auth/otp/request', { phone });
+    } catch (error) {
+      console.error('OTP request failed', error);
+      throw error;
+    }
+  }
+
+  async function verifyOtp(phone: string, code: string) {
+    try {
+      const response = await api.post('/v1/auth/otp/verify', { phone, code });
       const { token, user: userData } = response.data;
 
       localStorage.setItem('@TrataTudo:token', token);
@@ -41,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUser(userData);
     } catch (error) {
-      console.error('Login failed', error);
+      console.error('OTP verification failed', error);
       throw error;
     }
   }
@@ -53,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ signed: !!user, user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ signed: !!user, user, loading, requestOtp, verifyOtp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
