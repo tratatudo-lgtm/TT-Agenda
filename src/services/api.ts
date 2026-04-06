@@ -1,13 +1,17 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://79.72.48.151:3010',
+  baseURL: import.meta.env.VITE_API_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
+// Interceptor para adicionar a API Key a todos os pedidos autenticados
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('@TrataTudo:token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const apiKey = localStorage.getItem('@TrataTudo:apiKey');
+  if (apiKey) {
+    config.headers.Authorization = `Bearer ${apiKey}`;
   }
   return config;
 });
