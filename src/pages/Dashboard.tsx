@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import api from '../utils/api';
 import { 
   Calendar, 
   Users, 
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { formatCurrency } from '../utils';
+import { cn } from '../utils';
 
 interface Stats {
   todayAppointments: number;
@@ -172,6 +173,4 @@ export default function Dashboard() {
   );
 }
 
-function cn(...inputs: any[]) {
-  return inputs.filter(Boolean).join(' ');
-}
+

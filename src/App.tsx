@@ -1,9 +1,10 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import DashboardLayout from './layouts/DashboardLayout';
 
 // Pages
-import Login from './pages/Login';
+import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import Appointments from './pages/Appointments';
 import Clients from './pages/Clients';
@@ -14,7 +15,8 @@ import Campaigns from './pages/Campaigns';
 import BotConfig from './pages/BotConfig';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { signed, loading } = useAuth();
+  const auth = useAuth();
+  const { signed, loading } = auth || {};
 
   if (loading) {
     return (
@@ -36,7 +38,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          <Route path="/login" element={<LoginPage />} />
           
           <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           <Route path="/appointments" element={<PrivateRoute><Appointments /></PrivateRoute>} />

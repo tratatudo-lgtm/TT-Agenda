@@ -30,14 +30,17 @@ const navItems = [
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { signOut, user } = useAuth();
+  const auth = useAuth();
+  const { signOut, user } = auth || {};
   const location = useLocation();
   const navigate = useNavigate();
 
   const handleSignOut = () => {
-    signOut();
+    if (signOut) signOut();
     navigate('/login');
   };
+
+  if (!auth) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 flex">

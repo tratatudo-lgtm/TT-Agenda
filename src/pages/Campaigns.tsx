@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import api from '../utils/api';
 import { Megaphone, Plus, Send, Trash2, Users } from 'lucide-react';
 
 interface Campaign {

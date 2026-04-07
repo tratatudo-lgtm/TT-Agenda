@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import api from '../services/api';
+import api from '../utils/api';
 import { Bot, Save, Loader2, MessageSquare, Settings } from 'lucide-react';
 
 interface BotConfig {
