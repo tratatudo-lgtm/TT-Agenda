@@ -1,23 +1,13 @@
-import { useEffect, useState } from 'react';
-import api from '../utils/api';
-import { 
-  Plus, 
-  Scissors, 
-  Clock, 
-  Euro, 
-  Edit2, 
-  Trash2,
-  Tag
-} from 'lucide-react';
-import { formatCurrency } from '../utils';
+import React, { useEffect, useState } from 'react';
+import api from '../lib/api';
+import { Plus, Scissors, Clock, DollarSign, MoreVertical } from 'lucide-react';
 
 interface Service {
   id: string;
   name: string;
-  description: string;
   duration: number;
   price: number;
-  category: string;
+  description?: string;
 }
 
 export default function Services() {
@@ -25,85 +15,60 @@ export default function Services() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function loadServices() {
-      try {
-        const response = await api.get('/v1/services');
-        setServices(response.data);
-      } catch (error) {
-        console.error('Error loading services', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadServices();
+    api.get('/services')
+      .then(res => setServices(res.data))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-8">
+      <header className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Serviços</h2>
-          <p className="text-gray-500">Configure os serviços que o seu negócio oferece.</p>
+          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Serviços</h2>
+          <p className="text-gray-500 font-medium">Configure seu catálogo de serviços.</p>
         </div>
-        <button className="flex items-center justify-center gap-2 bg-indigo-600 text-white px-4 py-2.5 rounded-xl font-semibold hover:bg-indigo-700 transition-colors">
+        <button className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100">
           <Plus size={20} />
           Novo Serviço
         </button>
-      </div>
+      </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {loading ? (
-          [1, 2, 3].map(i => (
-            <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 animate-pulse h-40" />
-          ))
-        ) : services.length === 0 ? (
-          <div className="col-span-full p-12 text-center bg-white rounded-2xl border border-gray-100">
-            <Scissors size={48} className="mx-auto text-gray-300 mb-4" />
-            <h3 className="text-lg font-bold text-gray-900">Nenhum serviço</h3>
-            <p className="text-gray-500 mt-1">Adicione os serviços que os seus clientes podem agendar.</p>
-          </div>
-        ) : (
-          services.map((service) => (
-            <div key={service.id} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all flex flex-col">
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-xl bg-indigo-50 text-indigo-600">
-                  <Scissors size={24} />
-                </div>
-                <div className="flex gap-1">
-                  <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                    <Edit2 size={16} />
-                  </button>
-                  <button className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
+          [1,2,3].map(i => <div key={i} className="h-48 bg-white rounded-[24px] border border-gray-100 animate-pulse" />)
+        ) : services.map((service) => (
+          <div key={service.id} className="bg-white p-8 rounded-[24px] border border-gray-100 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4">
+              <button className="p-2 text-gray-300 hover:text-gray-600 transition-colors">
+                <MoreVertical size={20} />
+              </button>
+            </div>
 
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-bold uppercase rounded tracking-wider">
-                    {service.category}
-                  </span>
-                </div>
-                <h3 className="font-bold text-gray-900 text-lg">{service.name}</h3>
-                <p className="text-sm text-gray-500 mt-1 line-clamp-2">{service.description}</p>
-              </div>
+            <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-600 mb-6">
+              <Scissors size={28} />
+            </div>
 
-              <div className="mt-6 flex items-center justify-between pt-4 border-t border-gray-50">
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-1.5 text-sm text-gray-600">
-                    <Clock size={16} className="text-gray-400" />
-                    {service.duration} min
-                  </div>
-                  <div className="flex items-center gap-1.5 text-sm font-bold text-indigo-600">
-                    <Euro size={16} />
-                    {formatCurrency(service.price)}
-                  </div>
-                </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{service.name}</h3>
+            <p className="text-sm font-medium text-gray-400 mb-6 line-clamp-2">{service.description || 'Sem descrição definida.'}</p>
+
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Clock size={16} className="text-gray-400" />
+                <span className="text-sm font-bold text-gray-900">{service.duration} min</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <DollarSign size={16} className="text-gray-400" />
+                <span className="text-sm font-black text-indigo-600">R$ {service.price}</span>
               </div>
             </div>
-          ))
-        )}
+
+            <div className="mt-8 pt-6 border-t border-gray-50">
+              <button className="w-full py-3 text-sm font-bold text-gray-500 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                Editar Configurações
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -1,93 +1,59 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import api from '../utils/api';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '../lib/api';
 
-interface User {
+interface Business {
   id: string;
   name: string;
-  email: string;
+  phone: string;
 }
 
-interface AuthContextData {
-  signed: boolean;
-  user: User | null;
+interface AuthContextType {
+  user: Business | null;
   loading: boolean;
-  requestOtp(phone: string): Promise<void>;
-  verifyOtp(phone: string, code: string): Promise<void>;
-  signOut(): void;
+  login: (phone: string, code: string) => Promise<void>;
+  logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextData | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<Business | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadStoragedData = () => {
-      try {
-        const storagedToken = localStorage.getItem('@TrataTudo:token');
-        const storagedUser = localStorage.getItem('@TrataTudo:user');
-
-        if (storagedToken && storagedUser) {
-          setUser(JSON.parse(storagedUser));
-        }
-      } catch (error) {
-        console.error('Error loading storaged auth data', error);
-        localStorage.removeItem('@TrataTudo:token');
-        localStorage.removeItem('@TrataTudo:user');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadStoragedData();
-  }, []);
-
-  const requestOtp = useCallback(async (phone: string) => {
-    try {
-      await api.post('/v1/auth/otp/request', { phone });
-    } catch (error) {
-      console.error('OTP request failed', error);
-      throw error;
+    const storedUser = localStorage.getItem('tt_user');
+    const token = localStorage.getItem('tt_token');
+    if (storedUser && token) {
+      setUser(JSON.parse(storedUser));
     }
+    setLoading(false);
   }, []);
 
-  const verifyOtp = useCallback(async (phone: string, code: string) => {
-    try {
-      const response = await api.post('/v1/auth/otp/verify', { phone, code });
-      const { token, user: userData } = response.data || {};
+  const login = async (phone: string, code: string) => {
+    const response = await api.post('/auth/verify-otp', { phone, code });
+    const { token, business } = response.data;
+    localStorage.setItem('tt_token', token);
+    localStorage.setItem('tt_user', JSON.stringify(business));
+    setUser(business);
+  };
 
-      if (!token || !userData) {
-        throw new Error('Invalid response from server');
-      }
-
-      localStorage.setItem('@TrataTudo:token', token);
-      localStorage.setItem('@TrataTudo:user', JSON.stringify(userData));
-      
-      setUser(userData);
-    } catch (error) {
-      console.error('OTP verification failed', error);
-      throw error;
-    }
-  }, []);
-
-  const signOut = useCallback(() => {
-    localStorage.removeItem('@TrataTudo:token');
-    localStorage.removeItem('@TrataTudo:user');
+  const logout = () => {
+    localStorage.removeItem('tt_token');
+    localStorage.removeItem('tt_user');
     setUser(null);
-  }, []);
+  };
 
   return (
-    <AuthContext.Provider value={{ signed: !!user, user, loading, requestOtp, verifyOtp, signOut }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
 
-export function useAuth(): AuthContextData {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}
+};
