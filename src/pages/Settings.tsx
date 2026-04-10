@@ -63,7 +63,7 @@ export default function Settings() {
                 <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nome da Empresa</label>
                 <input 
                   type="text" 
-                  defaultValue={user?.company_name}
+                  defaultValue={user?.name}
                   className="w-full bg-gray-50 border-none rounded-2xl p-4 text-gray-900 font-medium focus:ring-2 focus:ring-indigo-500"
                 />
               </div>

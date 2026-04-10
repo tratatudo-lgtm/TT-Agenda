@@ -40,7 +40,7 @@ async function startServer() {
 
     jwt.verify(token, process.env.JWT_SECRET || 'secret', (err: any, decoded: any) => {
       if (err) return res.status(403).json({ error: 'Token inválido ou expirado' });
-      req.user = decoded; // Contém client_id
+      req.user = decoded; // Contém business_id
       next();
     });
   };
@@ -48,28 +48,45 @@ async function startServer() {
   // --- Auth Routes (OTP) ---
 
   app.post('/api/auth/send-otp', async (req, res) => {
-    const { phone } = req.body;
+    const phone = req.body.whatsapp || req.body.phone;
     if (!phone) return res.status(400).json({ error: 'Telefone é obrigatório' });
 
-    // Verificar se o cliente existe
-    const { data: client, error: clientError } = await supabase
+    // Buscar cliente (negócio)
+    let { data: client, error: clientError } = await supabase
       .from('clients')
-      .select('id')
+      .select('*')
       .eq('phone_e164', phone)
       .single();
 
-    if (clientError || !client) {
-      return res.status(404).json({ error: 'Cliente não encontrado' });
+    // Se não existir, criar automaticamente
+    if (!client) {
+      const { data: newClient, error: createError } = await supabase
+        .from('clients')
+        .insert({ 
+          phone_e164: phone, 
+          phone: phone, 
+          name: `Negócio ${phone.slice(-4)}` 
+        })
+        .select()
+        .single();
+      
+      if (createError) return res.status(500).json({ error: 'Erro ao criar conta de negócio' });
+      client = newClient;
     }
 
     // Gerar OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutos
 
-    // Salvar OTP (usando tabela otps ou similar)
+    // Salvar OTP na tabela auth_otps
     const { error: otpError } = await supabase
-      .from('otps')
-      .upsert({ phone, otp, expires_at: expiresAt.toISOString() }, { onConflict: 'phone' });
+      .from('auth_otps')
+      .upsert({ 
+        phone_e164: phone, 
+        code: otp, 
+        purpose: 'login', 
+        expires_at: expiresAt.toISOString() 
+      }, { onConflict: 'phone_e164' });
 
     if (otpError) return res.status(500).json({ error: 'Erro ao gerar código' });
 
@@ -93,34 +110,38 @@ async function startServer() {
   });
 
   app.post('/api/auth/verify-otp', async (req, res) => {
-    const { phone, code } = req.body;
+    const phone = req.body.whatsapp || req.body.phone;
+    const { code } = req.body;
     if (!phone || !code) return res.status(400).json({ error: 'Telefone e código são obrigatórios' });
 
+    // Verificar OTP na tabela auth_otps
     const { data: otpData, error: otpError } = await supabase
-      .from('otps')
+      .from('auth_otps')
       .select('*')
-      .eq('phone', phone)
+      .eq('phone_e164', phone)
+      .eq('code', code)
+      .gt('expires_at', new Date().toISOString())
       .single();
 
-    if (otpError || !otpData || otpData.otp !== code || new Date(otpData.expires_at) < new Date()) {
+    if (otpError || !otpData) {
       return res.status(401).json({ error: 'Código inválido ou expirado' });
     }
 
-    // Limpar OTP
-    await supabase.from('otps').delete().eq('phone', phone);
+    // Limpar OTP usado
+    await supabase.from('auth_otps').delete().eq('phone_e164', phone);
 
-    // Buscar dados do cliente
+    // Buscar dados do cliente (negócio)
     const { data: client, error: clientError } = await supabase
       .from('clients')
       .select('*')
       .eq('phone_e164', phone)
       .single();
 
-    if (clientError || !client) return res.status(404).json({ error: 'Erro ao recuperar dados do cliente' });
+    if (clientError || !client) return res.status(404).json({ error: 'Erro ao recuperar dados do negócio' });
 
-    // Gerar JWT
+    // Gerar JWT com business_id
     const token = jwt.sign(
-      { client_id: client.id, phone: client.phone_e164 }, 
+      { business_id: client.id, phone: client.phone_e164 }, 
       process.env.JWT_SECRET || 'secret', 
       { expiresIn: '7d' }
     );
@@ -133,10 +154,10 @@ async function startServer() {
   app.get('/api/appointments', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('calendar_events')
-      .select('*, client_profiles(company_name)')
-      .eq('client_id', req.user.client_id)
+      .select('*, client_profiles(name)')
+      .eq('business_id', req.user.business_id)
       .eq('event_type', 'appointment')
-      .order('start_at', { ascending: true });
+      .order('start_time', { ascending: true });
 
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
@@ -147,7 +168,7 @@ async function startServer() {
       .from('calendar_events')
       .insert({ 
         ...req.body, 
-        client_id: req.user.client_id,
+        business_id: req.user.business_id,
         event_type: 'appointment'
       })
       .select()
@@ -162,7 +183,7 @@ async function startServer() {
       .from('calendar_events')
       .update(req.body)
       .eq('id', req.params.id)
-      .eq('client_id', req.user.client_id)
+      .eq('business_id', req.user.business_id)
       .select()
       .single();
 
@@ -175,7 +196,7 @@ async function startServer() {
       .from('calendar_events')
       .delete()
       .eq('id', req.params.id)
-      .eq('client_id', req.user.client_id);
+      .eq('business_id', req.user.business_id);
 
     if (error) return res.status(500).json({ error: error.message });
     res.sendStatus(204);
@@ -187,7 +208,7 @@ async function startServer() {
     const { data, error } = await supabase
       .from('client_profiles')
       .select('*')
-      .eq('client_id', req.user.client_id);
+      .eq('business_id', req.user.business_id);
 
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
@@ -196,7 +217,7 @@ async function startServer() {
   app.post('/api/customers', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('client_profiles')
-      .insert({ ...req.body, client_id: req.user.client_id })
+      .insert({ ...req.body, business_id: req.user.business_id })
       .select()
       .single();
 
@@ -209,7 +230,7 @@ async function startServer() {
       .from('client_profiles')
       .update(req.body)
       .eq('id', req.params.id)
-      .eq('client_id', req.user.client_id)
+      .eq('business_id', req.user.business_id)
       .select()
       .single();
 
@@ -222,7 +243,7 @@ async function startServer() {
       .from('client_profiles')
       .delete()
       .eq('id', req.params.id)
-      .eq('client_id', req.user.client_id);
+      .eq('business_id', req.user.business_id);
 
     if (error) return res.status(500).json({ error: error.message });
     res.sendStatus(204);
@@ -234,7 +255,7 @@ async function startServer() {
     const { data, error } = await supabase
       .from('categories')
       .select('*')
-      .eq('client_id', req.user.client_id);
+      .eq('business_id', req.user.business_id);
 
     if (error) return res.status(500).json({ error: error.message });
     res.json(data);
@@ -243,7 +264,7 @@ async function startServer() {
   app.post('/api/services', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('categories')
-      .insert({ ...req.body, client_id: req.user.client_id })
+      .insert({ ...req.body, business_id: req.user.business_id })
       .select()
       .single();
 
@@ -256,7 +277,7 @@ async function startServer() {
       .from('categories')
       .update(req.body)
       .eq('id', req.params.id)
-      .eq('client_id', req.user.client_id)
+      .eq('business_id', req.user.business_id)
       .select()
       .single();
 
@@ -269,7 +290,7 @@ async function startServer() {
       .from('categories')
       .delete()
       .eq('id', req.params.id)
-      .eq('client_id', req.user.client_id);
+      .eq('business_id', req.user.business_id);
 
     if (error) return res.status(500).json({ error: error.message });
     res.sendStatus(204);

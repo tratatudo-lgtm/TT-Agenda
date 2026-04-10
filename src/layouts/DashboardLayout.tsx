@@ -110,11 +110,11 @@ export default function DashboardLayout() {
             <div className="h-8 w-px bg-gray-100" />
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-gray-900 leading-none mb-1">{user?.company_name}</p>
+                <p className="text-sm font-bold text-gray-900 leading-none mb-1">{user?.name}</p>
                 <p className="text-xs font-medium text-gray-400">{user?.phone_e164}</p>
               </div>
               <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-sm">
-                {user?.company_name?.[0] || 'T'}
+                {user?.name?.[0] || 'T'}
               </div>
             </div>
           </div>

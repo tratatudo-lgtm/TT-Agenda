@@ -15,7 +15,7 @@ import toast from 'react-hot-toast';
 
 interface Customer {
   id: string;
-  company_name: string;
+  name: string;
   phone_e164: string;
   email?: string;
 }
@@ -41,7 +41,7 @@ export default function Clients() {
   };
 
   const filteredCustomers = customers.filter(c => 
-    c.company_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.phone_e164.includes(searchTerm)
   );
 
@@ -90,10 +90,10 @@ export default function Clients() {
 
             <div className="flex items-center gap-4 mb-6">
               <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-xl">
-                {customer.company_name[0]}
+                {customer.name[0]}
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-gray-900 truncate">{customer.company_name}</h3>
+                <h3 className="text-lg font-bold text-gray-900 truncate">{customer.name}</h3>
                 <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Ativo</p>
               </div>
             </div>

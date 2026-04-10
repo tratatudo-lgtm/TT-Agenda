@@ -18,9 +18,9 @@ import toast from 'react-hot-toast';
 interface Appointment {
   id: string;
   title: string;
-  start_at: string;
+  start_time: string;
   status: string;
-  client_profiles: { company_name: string };
+  client_profiles: { name: string };
 }
 
 export default function Agenda() {
@@ -45,7 +45,7 @@ export default function Agenda() {
 
   const filteredAppointments = appointments.filter(app => 
     app.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.client_profiles?.company_name.toLowerCase().includes(searchTerm.toLowerCase())
+    app.client_profiles?.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -114,7 +114,7 @@ export default function Agenda() {
                 <div key={app.id} className="p-6 flex items-center gap-6 hover:bg-gray-50 transition-all group">
                   <div className="text-center min-w-[80px]">
                     <p className="text-lg font-black text-gray-900 leading-none mb-1">
-                      {format(new Date(app.start_at), 'HH:mm')}
+                      {format(new Date(app.start_time), 'HH:mm')}
                     </p>
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Início</p>
                   </div>
@@ -124,7 +124,7 @@ export default function Agenda() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <User size={14} className="text-gray-400" />
-                      <p className="text-sm font-bold text-gray-900">{app.client_profiles?.company_name}</p>
+                      <p className="text-sm font-bold text-gray-900">{app.client_profiles?.name}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Scissors size={14} className="text-gray-400" />

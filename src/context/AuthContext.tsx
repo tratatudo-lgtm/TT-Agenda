@@ -4,7 +4,7 @@ import api from '../lib/api';
 interface User {
   id: string;
   phone_e164: string;
-  company_name: string;
+  name: string;
 }
 
 interface AuthContextType {
