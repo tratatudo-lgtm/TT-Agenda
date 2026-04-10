@@ -4,25 +4,25 @@ import { useAuth } from '../context/AuthContext';
 import api from '../lib/api';
 import { Phone, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import toast from 'react-hot-toast';
 
 export default function Login() {
   const [phone, setPhone] = useState('');
   const [code, setCode] = useState('');
   const [step, setStep] = useState<'phone' | 'code'>('phone');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
     try {
       await api.post('/auth/send-otp', { phone });
       setStep('code');
+      toast.success('Código enviado via WhatsApp!');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao enviar código');
+      toast.error(err.response?.data?.error || 'Erro ao enviar código');
     } finally {
       setLoading(false);
     }
@@ -31,12 +31,12 @@ export default function Login() {
   const handleVerifyOtp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
     try {
       await login(phone, code);
+      toast.success('Bem-vindo ao TT-Agenda!');
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Código inválido');
+      toast.error(err.response?.data?.error || 'Código inválido');
     } finally {
       setLoading(false);
     }
@@ -78,8 +78,6 @@ export default function Login() {
                   </div>
                 </div>
 
-                {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
-
                 <button
                   type="submit"
                   disabled={loading}
@@ -119,8 +117,6 @@ export default function Login() {
                     />
                   </div>
                 </div>
-
-                {error && <p className="text-red-500 text-sm font-medium">{error}</p>}
 
                 <div className="space-y-3">
                   <button

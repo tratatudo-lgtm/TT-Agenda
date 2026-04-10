@@ -1,102 +1,129 @@
-import React, { useEffect, useState } from 'react';
-import api from '../lib/api';
-import { Clock, Save, Loader2, CheckCircle2 } from 'lucide-react';
-
-interface WorkingHour {
-  day_of_week: number;
-  open_time: string;
-  close_time: string;
-  is_closed: boolean;
-}
-
-const DAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+import React from 'react';
+import { 
+  Settings as SettingsIcon, 
+  Clock, 
+  User, 
+  Bell, 
+  Shield, 
+  Smartphone,
+  Save
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Settings() {
-  const [hours, setHours] = useState<WorkingHour[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const { user } = useAuth();
 
-  useEffect(() => {
-    api.get('/working-hours')
-      .then(res => setHours(res.data))
-      .finally(() => setLoading(false));
-  }, []);
-
-  const handleSave = () => {
-    setSaving(true);
-    // Mock save
-    setTimeout(() => {
-      setSaving(false);
-      setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
-    }, 1000);
-  };
+  const days = [
+    'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 
+    'Sexta-feira', 'Sábado', 'Domingo'
+  ];
 
   return (
-    <div className="space-y-8 max-w-4xl">
-      <header className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900 tracking-tight">Configurações</h2>
-          <p className="text-gray-500 font-medium">Ajuste os horários e preferências do seu negócio.</p>
-        </div>
-        <button 
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-100 disabled:opacity-50"
-        >
-          {saving ? <Loader2 className="animate-spin" size={20} /> : (saved ? <CheckCircle2 size={20} /> : <Save size={20} />)}
-          {saving ? 'Salvando...' : (saved ? 'Salvo!' : 'Salvar Alterações')}
-        </button>
+    <div className="space-y-10">
+      <header>
+        <h2 className="text-3xl font-black text-gray-900 tracking-tight">Configurações</h2>
+        <p className="text-gray-500 font-medium">Personalize o funcionamento do seu negócio.</p>
       </header>
 
-      <div className="bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
-        <div className="p-8 border-b border-gray-50 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-            <Clock size={20} />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900">Horário de Funcionamento</h3>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
+        <aside className="lg:col-span-1">
+          <nav className="space-y-2">
+            {[
+              { name: 'Perfil do Negócio', icon: User, active: true },
+              { name: 'Horários', icon: Clock },
+              { name: 'Notificações', icon: Bell },
+              { name: 'Segurança', icon: Shield },
+              { name: 'Integrações', icon: Smartphone },
+            ].map((item) => (
+              <button
+                key={item.name}
+                className={`w-full flex items-center gap-3 px-6 py-4 rounded-2xl text-sm font-bold transition-all ${
+                  item.active 
+                    ? 'bg-white text-indigo-600 shadow-sm border border-gray-100' 
+                    : 'text-gray-400 hover:text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                <item.icon size={18} />
+                {item.name}
+              </button>
+            ))}
+          </nav>
+        </aside>
 
-        <div className="p-8 space-y-4">
-          {loading ? (
-            [1,2,3,4,5,6,7].map(i => <div key={i} className="h-16 bg-gray-50 rounded-2xl animate-pulse" />)
-          ) : DAYS.map((day, i) => {
-            const hour = hours.find(h => h.day_of_week === i) || { day_of_week: i, open_time: '09:00', close_time: '18:00', is_closed: false };
-            return (
-              <div key={day} className="flex items-center justify-between p-4 rounded-2xl hover:bg-gray-50 transition-colors">
-                <div className="flex items-center gap-4">
-                  <div className="w-32">
-                    <span className="text-sm font-bold text-gray-900">{day}</span>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={!hour.is_closed} className="sr-only peer" readOnly />
-                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                  </label>
-                </div>
-
-                {!hour.is_closed && (
-                  <div className="flex items-center gap-3">
-                    <input 
-                      type="time" 
-                      value={hour.open_time} 
-                      className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                    <span className="text-gray-400 font-bold">às</span>
-                    <input 
-                      type="time" 
-                      value={hour.close_time} 
-                      className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm font-bold text-gray-900 focus:ring-2 focus:ring-indigo-500 outline-none"
-                    />
-                  </div>
-                )}
-
-                {hour.is_closed && (
-                  <span className="text-sm font-bold text-red-400 uppercase tracking-widest">Fechado</span>
-                )}
+        <div className="lg:col-span-3 space-y-8">
+          {/* Business Profile */}
+          <section className="bg-white rounded-[32px] p-8 lg:p-10 border border-gray-100 shadow-sm">
+            <h3 className="text-xl font-bold text-gray-900 mb-8 flex items-center gap-3">
+              <User size={20} className="text-indigo-600" />
+              Perfil do Negócio
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Nome da Empresa</label>
+                <input 
+                  type="text" 
+                  defaultValue={user?.company_name}
+                  className="w-full bg-gray-50 border-none rounded-2xl p-4 text-gray-900 font-medium focus:ring-2 focus:ring-indigo-500"
+                />
               </div>
-            );
-          })}
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">WhatsApp de Contato</label>
+                <input 
+                  type="text" 
+                  defaultValue={user?.phone_e164}
+                  className="w-full bg-gray-50 border-none rounded-2xl p-4 text-gray-900 font-medium focus:ring-2 focus:ring-indigo-500"
+                  disabled
+                />
+              </div>
+              <div className="md:col-span-2 space-y-2">
+                <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Bio / Descrição</label>
+                <textarea 
+                  rows={3}
+                  placeholder="Conte um pouco sobre o seu negócio..."
+                  className="w-full bg-gray-50 border-none rounded-2xl p-4 text-gray-900 font-medium focus:ring-2 focus:ring-indigo-500 resize-none"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Working Hours */}
+          <section className="bg-white rounded-[32px] p-8 lg:p-10 border border-gray-100 shadow-sm">
+            <div className="flex items-center justify-between mb-8">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-3">
+                <Clock size={20} className="text-indigo-600" />
+                Horários de Funcionamento
+              </h3>
+              <button className="text-sm font-bold text-indigo-600 hover:text-indigo-700">Copiar para todos</button>
+            </div>
+
+            <div className="space-y-4">
+              {days.map((day) => (
+                <div key={day} className="flex flex-col sm:flex-row sm:items-center justify-between p-6 bg-gray-50 rounded-[24px] gap-4">
+                  <span className="font-bold text-gray-900 min-w-[140px]">{day}</span>
+                  <div className="flex items-center gap-4">
+                    <input type="time" defaultValue="09:00" className="bg-white border-none rounded-xl px-4 py-2 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500" />
+                    <span className="text-gray-300 font-bold">até</span>
+                    <input type="time" defaultValue="18:00" className="bg-white border-none rounded-xl px-4 py-2 text-sm font-bold shadow-sm focus:ring-2 focus:ring-indigo-500" />
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" defaultChecked className="sr-only peer" />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </div>
+                    <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Aberto</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div className="flex justify-end">
+            <button className="bg-indigo-600 text-white px-10 py-5 rounded-[24px] font-bold flex items-center gap-3 hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100">
+              <Save size={20} />
+              Salvar Alterações
+            </button>
+          </div>
         </div>
       </div>
     </div>
