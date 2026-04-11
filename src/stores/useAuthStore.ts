@@ -1,18 +1,16 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface User {
-  id: string;
+interface Client {
+  id: number;
   company_name: string;
   phone_e164: string;
-  status: string;
-  [key: string]: any;
+  status?: string;
 }
 
 interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  setUser: (user: User | null) => void;
+  user: Client | null;
+  setUser: (user: Client | null) => void;
   logout: () => void;
 }
 
@@ -20,9 +18,8 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      isAuthenticated: false,
-      setUser: (user) => set({ user, isAuthenticated: !!user }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      setUser: (user) => set({ user }),
+      logout: () => set({ user: null }),
     }),
     {
       name: 'tt-agenda-auth',
