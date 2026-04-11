@@ -1,193 +1,190 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Calendar, 
-  Users, 
-  Scissors, 
-  TrendingUp, 
-  ArrowUpRight, 
-  Plus,
-  Clock,
-  ChevronRight,
-  MessageCircle
-} from 'lucide-react';
-import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Users, Scissors, TrendingUp, Plus, Ticket } from 'lucide-react';
 import api from '../lib/api';
-import { Appointment } from '../types';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { Link } from 'react-router-dom';
+import { useAuthStore } from '../stores/useAuthStore';
 
-const MetricCard = ({ icon: Icon, label, value, trend, color }: any) => (
-  <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
-    <div className="flex justify-between items-start mb-4">
-      <div className={`p-3 rounded-2xl ${color}`}>
-        <Icon size={24} />
-      </div>
-      {trend && (
-        <span className="flex items-center gap-1 text-emerald-600 text-sm font-bold bg-emerald-50 px-2 py-1 rounded-lg">
-          <TrendingUp size={14} />
-          {trend}
-        </span>
-      )}
-    </div>
-    <p className="text-slate-500 font-medium text-sm mb-1">{label}</p>
-    <h3 className="text-2xl font-bold text-slate-900">{value}</h3>
-  </div>
-);
+interface Appointment {
+  id: string;
+  client_profile?: { company_name: string };
+  service?: { name: string };
+  start_at: string;
+  status: string;
+}
 
 export default function Dashboard() {
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    todayAppointments: 0,
+    totalClients: 0,
+    totalServices: 0,
+    revenue: 0,
+  });
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchDashboardData = async () => {
       try {
-        const response = await api.get('/api/appointments');
-        setAppointments(response.data);
+        // Buscar agendamentos
+        const appointmentsRes = await api.get('/api/client/appointments');
+        const allAppointments = appointmentsRes.data || [];
+        
+        // Filtrar agendamentos de hoje
+        const today = new Date().toISOString().split('T')[0];
+        const todayAppointments = allAppointments.filter((apt: Appointment) => 
+          apt.start_at?.startsWith(today)
+        );
+
+        // Buscar clientes
+        const clientsRes = await api.get('/api/client/customers');
+        
+        // Buscar serviços
+        const servicesRes = await api.get('/api/client/services');
+
+        setStats({
+          todayAppointments: todayAppointments.length,
+          totalClients: clientsRes.data?.length || 0,
+          totalServices: servicesRes.data?.length || 0,
+          revenue: 0, // TODO: Calcular com base nos agendamentos
+        });
+
+        // Próximos agendamentos (ordenados por data)
+        const upcoming = allAppointments
+          .filter((apt: Appointment) => new Date(apt.start_at) >= new Date())
+          .sort((a: Appointment, b: Appointment) => 
+            new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+          )
+          .slice(0, 5);
+        
+        setAppointments(upcoming);
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error('Erro ao carregar dashboard:', error);
       } finally {
         setLoading(false);
       }
     };
-    fetchData();
+
+    fetchDashboardData();
   }, []);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-10">
-      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Painel de Controlo</h2>
-          <p className="text-slate-500 font-medium">Bem-vindo ao seu centro de operações.</p>
-        </div>
-        <Link 
-          to="/agenda"
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100"
+    <div className="space-y-8">
+      {/* Cabeçalho */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Painel de Controlo</h1>
+        <p className="text-gray-500">Bem-vindo ao seu centro de operações, {user?.name || user?.company_name}.</p>
+      </div>
+
+      {/* Cards de Estatísticas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          label="Agendamentos Hoje"
+          value={stats.todayAppointments}
+          icon={<Calendar size={24} />}
+          color="bg-blue-500"
+        />
+        <StatCard
+          label="Total de Clientes"
+          value={stats.totalClients}
+          icon={<Users size={24} />}
+          color="bg-indigo-500"
+        />
+        <StatCard
+          label="Serviços Ativos"
+          value={stats.totalServices}
+          icon={<Scissors size={24} />}
+          color="bg-purple-500"
+        />
+        <StatCard
+          label="Faturação Prevista"
+          value={`€ ${stats.revenue.toFixed(2)}`}
+          icon={<TrendingUp size={24} />}
+          color="bg-emerald-500"
+        />
+      </div>
+
+      {/* Ações rápidas */}
+      <div className="flex gap-4">
+        <button
+          onClick={() => navigate('/agenda')}
+          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
         >
           <Plus size={20} />
           Novo Agendamento
-        </Link>
-      </header>
-
-      {/* Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard 
-          icon={Calendar} 
-          label="Agendamentos Hoje" 
-          value="12" 
-          trend="+15%" 
-          color="bg-indigo-50 text-indigo-600" 
-        />
-        <MetricCard 
-          icon={Users} 
-          label="Total de Clientes" 
-          value="1,284" 
-          trend="+4%" 
-          color="bg-emerald-50 text-emerald-600" 
-        />
-        <MetricCard 
-          icon={Scissors} 
-          label="Serviços Ativos" 
-          value="24" 
-          color="bg-amber-50 text-amber-600" 
-        />
-        <MetricCard 
-          icon={TrendingUp} 
-          label="Faturação Prevista" 
-          value="€ 4,250" 
-          trend="+12%" 
-          color="bg-rose-50 text-rose-600" 
-        />
+        </button>
+        <button
+          onClick={() => navigate('/suporte')}
+          className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+        >
+          <Ticket size={20} />
+          Abrir Ticket
+        </button>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        {/* Upcoming Appointments */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold text-slate-900">Próximos Agendamentos</h3>
-            <Link to="/agenda" className="text-indigo-600 font-bold text-sm flex items-center gap-1 hover:underline">
-              Ver todos <ChevronRight size={16} />
-            </Link>
-          </div>
-
-          <div className="bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-sm">
-            {loading ? (
-              <div className="p-12 text-center text-slate-400">Carregando...</div>
-            ) : appointments.length > 0 ? (
-              <div className="divide-y divide-slate-100">
-                {appointments.slice(0, 5).map((app) => (
-                  <div key={app.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-600 font-bold">
-                        {app.customer?.name?.[0] || 'C'}
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-slate-900">{app.customer?.name || 'Cliente'}</h4>
-                        <p className="text-sm text-slate-500 font-medium">{app.service?.name || 'Serviço'}</p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-2 text-slate-900 font-bold mb-1">
-                        <Clock size={16} className="text-slate-400" />
-                        {format(new Date(app.start_at), 'HH:mm')}
-                      </div>
-                      <p className="text-xs text-slate-500 font-medium">
-                        {format(new Date(app.start_at), "dd 'de' MMM", { locale: ptBR })}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="p-12 text-center">
-                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
-                  <Calendar size={32} />
-                </div>
-                <h4 className="font-bold text-slate-900 mb-1">Sem agendamentos próximos</h4>
-                <p className="text-slate-500 text-sm">Os seus novos agendamentos aparecerão aqui.</p>
-              </div>
-            )}
-          </div>
+      {/* Próximos Agendamentos */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="font-bold text-gray-900">Próximos Agendamentos</h3>
+          <button
+            onClick={() => navigate('/agenda')}
+            className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+          >
+            Ver todos
+          </button>
         </div>
-
-        {/* Quick Actions & Support */}
-        <div className="space-y-8">
-          <div className="bg-slate-900 text-white p-8 rounded-[32px] relative overflow-hidden">
-            <div className="relative z-10">
-              <h3 className="text-xl font-bold mb-2">Suporte Prioritário</h3>
-              <p className="text-slate-400 text-sm mb-6">Precisa de ajuda com a plataforma? A nossa equipa está disponível.</p>
-              <Link 
-                to="/support"
-                className="inline-flex items-center gap-2 bg-white text-slate-900 px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-100 transition-all"
-              >
-                <MessageCircle size={18} />
-                Abrir Ticket
-              </Link>
+        <div className="divide-y divide-gray-50">
+          {appointments.length === 0 ? (
+            <div className="p-8 text-center text-gray-500">
+              Sem agendamentos próximos
+              <p className="text-sm text-gray-400 mt-1">Os seus novos agendamentos aparecerão aqui.</p>
             </div>
-            <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
-          </div>
-
-          <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm">
-            <h3 className="text-lg font-bold text-slate-900 mb-6">Dicas de Crescimento</h3>
-            <div className="space-y-6">
-              {[
-                { title: 'Ative lembretes WhatsApp', desc: 'Reduza faltas em até 40%.' },
-                { title: 'Crie pacotes de serviços', desc: 'Aumente o ticket médio.' },
-              ].map((tip, i) => (
-                <div key={i} className="flex gap-4">
-                  <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 shrink-0">
-                    <ArrowUpRight size={20} />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-slate-900 text-sm">{tip.title}</h4>
-                    <p className="text-slate-500 text-xs mt-1">{tip.desc}</p>
-                  </div>
+          ) : (
+            appointments.map((apt) => (
+              <div key={apt.id} className="p-4 flex items-center gap-4 hover:bg-gray-50">
+                <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">
+                  <Users size={20} />
                 </div>
-              ))}
-            </div>
-          </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-gray-900">
+                    {apt.client_profile?.company_name || 'Cliente'}
+                  </p>
+                  <p className="text-xs text-gray-500">{apt.service?.name || 'Serviço'}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium text-gray-900">
+                    {new Date(apt.start_at).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                  <p className="text-xs text-emerald-600 font-medium">{apt.status}</p>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function StatCard({ label, value, icon, color }: any) {
+  return (
+    <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+      <div className="flex items-start justify-between mb-4">
+        <div className={`p-3 rounded-xl text-white ${color}`}>
+          {icon}
+        </div>
+      </div>
+      <p className="text-sm font-medium text-gray-500">{label}</p>
+      <h3 className="text-2xl font-bold text-gray-900 mt-1">{value}</h3>
     </div>
   );
 }
