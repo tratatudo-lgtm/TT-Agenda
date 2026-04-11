@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useAuthStore } from './stores/useAuthStore';
+import axios from 'axios';
+import { getDefaultCurrency } from './utils/format';
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout';
@@ -21,6 +23,28 @@ const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
+  const { setCountry, setCurrency, country, currency } = useAuthStore();
+
+  useEffect(() => {
+    const detectLocation = async () => {
+      // Only detect if not already set or if it's the default
+      if (country === 'PT' && currency === 'EUR') {
+        try {
+          const response = await axios.get('https://ipapi.co/json/');
+          if (response.data && response.data.country_code) {
+            const detectedCountry = response.data.country_code;
+            const detectedCurrency = response.data.currency || getDefaultCurrency(detectedCountry);
+            setCountry(detectedCountry);
+            setCurrency(detectedCurrency);
+          }
+        } catch (error) {
+          console.error('Error detecting location:', error);
+        }
+      }
+    };
+    detectLocation();
+  }, []);
+
   return (
     <Router>
       <Toaster 

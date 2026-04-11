@@ -14,6 +14,8 @@ import api from '../lib/api';
 import { BusinessSettings } from '../types';
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../stores/useAuthStore';
+import { getDefaultCurrency } from '../utils/format';
+import { Globe } from 'lucide-react';
 
 const daysOfWeek = [
   { id: 'monday', label: 'Segunda-feira' },
@@ -26,7 +28,7 @@ const daysOfWeek = [
 ];
 
 export default function Settings() {
-  const { user } = useAuthStore();
+  const { user, setCountry: setGlobalCountry, setCurrency: setGlobalCurrency } = useAuthStore();
   const [settings, setSettings] = useState<BusinessSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -34,13 +36,15 @@ export default function Settings() {
   useEffect(() => {
     const fetchSettings = async () => {
       try {
-        const response = await api.get('/api/settings');
+        const response = await api.get('/api/client/settings');
         setSettings(response.data);
       } catch (error) {
         console.error('Error fetching settings:', error);
         // Mock default settings if API fails for demo
         setSettings({
           company_name: user?.company_name || '',
+          country: user?.country || 'PT',
+          currency: user?.currency || 'EUR',
           working_hours: daysOfWeek.reduce((acc, day) => ({
             ...acc,
             [day.id]: { open: '09:00', close: '19:00', closed: day.id === 'sunday' }
@@ -61,13 +65,25 @@ export default function Settings() {
 
     setSaving(true);
     try {
-      await api.put('/api/settings', settings);
+      await api.put('/api/client/settings', settings);
+      setGlobalCountry(settings.country);
+      setGlobalCurrency(settings.currency);
       toast.success('Definições guardadas com sucesso!');
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Erro ao guardar definições');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleCountryChange = (countryCode: string) => {
+    if (!settings) return;
+    const suggestedCurrency = getDefaultCurrency(countryCode);
+    setSettings({
+      ...settings,
+      country: countryCode,
+      currency: suggestedCurrency
+    });
   };
 
   const updateWorkingHour = (dayId: string, field: string, value: any) => {
@@ -113,14 +129,25 @@ export default function Settings() {
             <h3 className="text-lg font-bold text-slate-900">Informações do Negócio</h3>
           </div>
           <div className="p-8 space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Nome da Empresa</label>
-              <input 
-                type="text" 
-                value={settings?.company_name}
-                onChange={(e) => setSettings(s => s ? { ...s, company_name: e.target.value } : null)}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Nome da Empresa</label>
+                <input 
+                  type="text" 
+                  value={settings?.company_name}
+                  onChange={(e) => setSettings(s => s ? { ...s, company_name: e.target.value } : null)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Telefone de Contacto</label>
+                <input 
+                  type="text" 
+                  value={user?.phone_e164}
+                  disabled
+                  className="w-full bg-slate-100 border border-slate-200 rounded-xl p-4 text-slate-500 font-medium outline-none cursor-not-allowed"
+                />
+              </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-2">
@@ -152,6 +179,54 @@ export default function Settings() {
                   </label>
                 </div>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Location and Currency */}
+        <section className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center gap-3">
+            <div className="p-2 bg-white rounded-lg border border-slate-200 text-slate-600">
+              <Globe size={20} />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">Localização e Moeda</h3>
+          </div>
+          <div className="p-8 grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">País</label>
+              <select 
+                value={settings?.country}
+                onChange={(e) => handleCountryChange(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
+              >
+                <option value="PT">Portugal</option>
+                <option value="BR">Brasil</option>
+                <option value="ES">Espanha</option>
+                <option value="FR">França</option>
+                <option value="GB">Reino Unido</option>
+                <option value="US">Estados Unidos</option>
+                <option value="CH">Suíça</option>
+                <option value="AO">Angola</option>
+                <option value="MZ">Moçambique</option>
+                <option value="CV">Cabo Verde</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Moeda</label>
+              <select 
+                value={settings?.currency}
+                onChange={(e) => setSettings(s => s ? { ...s, currency: e.target.value } : null)}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
+              >
+                <option value="EUR">Euro (€)</option>
+                <option value="BRL">Real (R$)</option>
+                <option value="GBP">Libra (£)</option>
+                <option value="USD">Dólar ($)</option>
+                <option value="CHF">Franco Suíço (CHF)</option>
+                <option value="AOA">Kwanza (AOA)</option>
+                <option value="MZN">Metical (MZN)</option>
+                <option value="CVE">Escudo (CVE)</option>
+              </select>
             </div>
           </div>
         </section>

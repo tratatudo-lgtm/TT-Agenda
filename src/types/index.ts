@@ -3,6 +3,8 @@ export interface User {
   company_name: string;
   phone_e164: string;
   status: string;
+  country?: string;
+  currency?: string;
 }
 
 export interface Appointment {
@@ -44,6 +46,8 @@ export interface Ticket {
 
 export interface BusinessSettings {
   company_name: string;
+  country: string;
+  currency: string;
   working_hours: {
     [key: string]: {
       open: string;

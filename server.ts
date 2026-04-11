@@ -151,19 +151,27 @@ async function startServer() {
 
   // --- CRUD: Agendamentos (calendar_events) ---
 
-  app.get('/api/appointments', authenticateToken, async (req: any, res) => {
+  app.get('/api/client/appointments', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('calendar_events')
-      .select('*, client_profiles(name)')
+      .select('*, client_profiles(*), categories(*)')
       .eq('business_id', req.user.business_id)
       .eq('event_type', 'appointment')
-      .order('start_time', { ascending: true });
+      .order('start_at', { ascending: true });
 
     if (error) return res.status(500).json({ error: error.message });
-    res.json(data);
+    
+    // Map to frontend expected structure if needed
+    const mappedData = data.map(app => ({
+      ...app,
+      customer: app.client_profiles,
+      service: app.categories
+    }));
+    
+    res.json(mappedData);
   });
 
-  app.post('/api/appointments', authenticateToken, async (req: any, res) => {
+  app.post('/api/client/appointments', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('calendar_events')
       .insert({ 
@@ -178,7 +186,7 @@ async function startServer() {
     res.json(data);
   });
 
-  app.put('/api/appointments/:id', authenticateToken, async (req: any, res) => {
+  app.put('/api/client/appointments/:id', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('calendar_events')
       .update(req.body)
@@ -191,7 +199,7 @@ async function startServer() {
     res.json(data);
   });
 
-  app.delete('/api/appointments/:id', authenticateToken, async (req: any, res) => {
+  app.delete('/api/client/appointments/:id', authenticateToken, async (req: any, res) => {
     const { error } = await supabase
       .from('calendar_events')
       .delete()
@@ -204,7 +212,7 @@ async function startServer() {
 
   // --- CRUD: Clientes do Negócio (client_profiles) ---
 
-  app.get('/api/customers', authenticateToken, async (req: any, res) => {
+  app.get('/api/client/customers', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('client_profiles')
       .select('*')
@@ -214,7 +222,7 @@ async function startServer() {
     res.json(data);
   });
 
-  app.post('/api/customers', authenticateToken, async (req: any, res) => {
+  app.post('/api/client/customers', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('client_profiles')
       .insert({ ...req.body, business_id: req.user.business_id })
@@ -225,7 +233,7 @@ async function startServer() {
     res.json(data);
   });
 
-  app.put('/api/customers/:id', authenticateToken, async (req: any, res) => {
+  app.put('/api/client/customers/:id', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('client_profiles')
       .update(req.body)
@@ -238,7 +246,7 @@ async function startServer() {
     res.json(data);
   });
 
-  app.delete('/api/customers/:id', authenticateToken, async (req: any, res) => {
+  app.delete('/api/client/customers/:id', authenticateToken, async (req: any, res) => {
     const { error } = await supabase
       .from('client_profiles')
       .delete()
@@ -251,7 +259,7 @@ async function startServer() {
 
   // --- CRUD: Serviços (categories) ---
 
-  app.get('/api/services', authenticateToken, async (req: any, res) => {
+  app.get('/api/client/services', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('categories')
       .select('*')
@@ -261,7 +269,7 @@ async function startServer() {
     res.json(data);
   });
 
-  app.post('/api/services', authenticateToken, async (req: any, res) => {
+  app.post('/api/client/services', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('categories')
       .insert({ ...req.body, business_id: req.user.business_id })
@@ -272,7 +280,7 @@ async function startServer() {
     res.json(data);
   });
 
-  app.put('/api/services/:id', authenticateToken, async (req: any, res) => {
+  app.put('/api/client/services/:id', authenticateToken, async (req: any, res) => {
     const { data, error } = await supabase
       .from('categories')
       .update(req.body)
@@ -285,7 +293,7 @@ async function startServer() {
     res.json(data);
   });
 
-  app.delete('/api/services/:id', authenticateToken, async (req: any, res) => {
+  app.delete('/api/client/services/:id', authenticateToken, async (req: any, res) => {
     const { error } = await supabase
       .from('categories')
       .delete()
@@ -294,6 +302,53 @@ async function startServer() {
 
     if (error) return res.status(500).json({ error: error.message });
     res.sendStatus(204);
+  });
+
+  // --- Settings & Tickets ---
+
+  app.get('/api/client/settings', authenticateToken, async (req: any, res) => {
+    const { data, error } = await supabase
+      .from('clients')
+      .select('company_name, country, currency, working_hours, appointment_interval, notifications_enabled')
+      .eq('id', req.user.business_id)
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  });
+
+  app.put('/api/client/settings', authenticateToken, async (req: any, res) => {
+    const { data, error } = await supabase
+      .from('clients')
+      .update(req.body)
+      .eq('id', req.user.business_id)
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  });
+
+  app.get('/api/client/tickets', authenticateToken, async (req: any, res) => {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
+      .eq('business_id', req.user.business_id)
+      .order('created_at', { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
+  });
+
+  app.post('/api/client/tickets', authenticateToken, async (req: any, res) => {
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .insert({ ...req.body, business_id: req.user.business_id, status: 'open' })
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data);
   });
 
   // --- Vite Middleware / Static Files ---

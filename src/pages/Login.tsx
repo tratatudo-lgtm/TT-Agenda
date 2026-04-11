@@ -36,17 +36,12 @@ export default function Login() {
 
     setLoading(true);
     try {
-      // Remove todos os caracteres não numéricos e adiciona o '+'
-      const cleanNumber = phone.replace(/\D/g, '');
-      const phone_e164 = `+${cleanNumber}`;
-      
-      console.log('Enviando OTP para:', phone_e164);
-      
+      const cleanPhone = phone.replace(/\D/g, '');
+      const phone_e164 = `+${cleanPhone}`;
       await api.post('/api/auth/send-otp', { phone_e164 });
       setStep('otp');
       toast.success('Código enviado para o seu WhatsApp!');
     } catch (error: any) {
-      console.error('Erro ao enviar OTP:', error);
       toast.error(error.response?.data?.error || 'Erro ao enviar código');
     } finally {
       setLoading(false);
@@ -56,21 +51,17 @@ export default function Login() {
   const handleVerifyOtp = async (data: LoginForm) => {
     setLoading(true);
     try {
-      const cleanNumber = phone.replace(/\D/g, '');
-      const phone_e164 = `+${cleanNumber}`;
-      
-      console.log('Verificando OTP para:', phone_e164);
-      
+      const cleanPhone = phone.replace(/\D/g, '');
+      const phone_e164 = `+${cleanPhone}`;
       const response = await api.post('/api/auth/verify-otp', {
         phone_e164,
         code: data.code,
       });
-
+      
       setUser(response.data.client);
       toast.success('Login realizado com sucesso!');
       navigate('/dashboard');
     } catch (error: any) {
-      console.error('Erro ao verificar OTP:', error);
       toast.error(error.response?.data?.error || 'Código inválido');
     } finally {
       setLoading(false);
@@ -200,7 +191,7 @@ export default function Login() {
                     {loading ? 'A verificar...' : 'Verificar e Entrar'}
                     <CheckCircle2 size={20} />
                   </button>
-
+                  
                   <button
                     type="button"
                     onClick={() => setStep('phone')}
