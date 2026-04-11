@@ -1,24 +1,19 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-interface User {
-  id: string;
+interface Client {
+  id: number;
   company_name: string;
   phone_e164: string;
-  status: string;
   country?: string;
   currency?: string;
-  [key: string]: any;
 }
 
 interface AuthState {
-  user: User | null;
-  isAuthenticated: boolean;
-  country: string;
-  currency: string;
-  setUser: (user: User | null) => void;
-  setCurrency: (currency: string) => void;
+  user: Client | null;
+  setUser: (user: Client | null) => void;
   setCountry: (country: string) => void;
+  setCurrency: (currency: string) => void;
   logout: () => void;
 }
 
@@ -26,21 +21,15 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
-      isAuthenticated: false,
-      country: 'PT',
-      currency: 'EUR',
-      setUser: (user) => set({ 
-        user, 
-        isAuthenticated: !!user,
-        country: user?.country || 'PT',
-        currency: user?.currency || 'EUR'
-      }),
-      setCurrency: (currency) => set({ currency }),
-      setCountry: (country) => set({ country }),
-      logout: () => set({ user: null, isAuthenticated: false }),
+      setUser: (user) => set({ user }),
+      setCountry: (country) => set((state) => ({
+        user: state.user ? { ...state.user, country } : null
+      })),
+      setCurrency: (currency) => set((state) => ({
+        user: state.user ? { ...state.user, currency } : null
+      })),
+      logout: () => set({ user: null }),
     }),
-    {
-      name: 'tt-agenda-auth',
-    }
+    { name: 'tt-agenda-auth' }
   )
 );

@@ -36,7 +36,8 @@ export default function Services() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [editingService, setEditingService] = useState<Service | null>(null);
-  const currency = useAuthStore((state) => state.currency);
+  const user = useAuthStore((state) => state.user);
+  const currency = user?.currency || 'EUR';
 
   const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<ServiceForm>({
     resolver: zodResolver(serviceSchema),

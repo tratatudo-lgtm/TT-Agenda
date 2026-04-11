@@ -93,7 +93,7 @@ export default function Settings() {
       working_hours: {
         ...settings.working_hours,
         [dayId]: {
-          ...settings.working_hours[dayId],
+          ...(settings.working_hours?.[dayId] || { open: '09:00', close: '19:00', closed: false }),
           [field]: value
         }
       }
@@ -134,7 +134,7 @@ export default function Settings() {
                 <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Nome da Empresa</label>
                 <input 
                   type="text" 
-                  value={settings?.company_name}
+                  value={settings?.company_name || ''}
                   onChange={(e) => setSettings(s => s ? { ...s, company_name: e.target.value } : null)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                 />
@@ -143,7 +143,7 @@ export default function Settings() {
                 <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Telefone de Contacto</label>
                 <input 
                   type="text" 
-                  value={user?.phone_e164}
+                  value={user?.phone_e164 || ''}
                   disabled
                   className="w-full bg-slate-100 border border-slate-200 rounded-xl p-4 text-slate-500 font-medium outline-none cursor-not-allowed"
                 />
@@ -153,7 +153,7 @@ export default function Settings() {
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Intervalo entre Agendamentos</label>
                 <select 
-                  value={settings?.appointment_interval}
+                  value={settings?.appointment_interval || 30}
                   onChange={(e) => setSettings(s => s ? { ...s, appointment_interval: parseInt(e.target.value) } : null)}
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
                 >
@@ -169,7 +169,7 @@ export default function Settings() {
                   <input 
                     type="checkbox" 
                     id="notif"
-                    checked={settings?.notifications_enabled}
+                    checked={settings?.notifications_enabled || false}
                     onChange={(e) => setSettings(s => s ? { ...s, notifications_enabled: e.target.checked } : null)}
                     className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500"
                   />
@@ -195,7 +195,7 @@ export default function Settings() {
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">País</label>
               <select 
-                value={settings?.country}
+                value={settings?.country || 'PT'}
                 onChange={(e) => handleCountryChange(e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
               >
@@ -214,7 +214,7 @@ export default function Settings() {
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Moeda</label>
               <select 
-                value={settings?.currency}
+                value={settings?.currency || 'EUR'}
                 onChange={(e) => setSettings(s => s ? { ...s, currency: e.target.value } : null)}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
               >
@@ -241,7 +241,7 @@ export default function Settings() {
           </div>
           <div className="p-8 divide-y divide-slate-100">
             {daysOfWeek.map((day) => {
-              const config = settings?.working_hours[day.id];
+              const config = settings?.working_hours?.[day.id] || { open: '09:00', close: '19:00', closed: day.id === 'sunday' };
               return (
                 <div key={day.id} className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4 min-w-[180px]">
@@ -258,14 +258,14 @@ export default function Settings() {
                     <div className="flex items-center gap-3">
                       <input 
                         type="time" 
-                        value={config?.open}
+                        value={config?.open || '09:00'}
                         onChange={(e) => updateWorkingHour(day.id, 'open', e.target.value)}
                         className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
                       />
                       <span className="text-slate-400 font-bold">até</span>
                       <input 
                         type="time" 
-                        value={config?.close}
+                        value={config?.close || '19:00'}
                         onChange={(e) => updateWorkingHour(day.id, 'close', e.target.value)}
                         className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-indigo-500 outline-none"
                       />

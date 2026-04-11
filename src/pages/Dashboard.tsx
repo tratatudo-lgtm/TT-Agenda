@@ -42,7 +42,8 @@ export default function Dashboard() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
-  const currency = useAuthStore((state) => state.currency);
+  const user = useAuthStore((state) => state.user);
+  const currency = user?.currency || 'EUR';
 
   useEffect(() => {
     const fetchData = async () => {

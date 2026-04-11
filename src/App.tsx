@@ -18,17 +18,19 @@ import Settings from './pages/Settings';
 import Support from './pages/Support';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  return isAuthenticated ? <>{children}</> : <Navigate to="/login" />;
+  const user = useAuthStore((state) => state.user);
+  return user ? <>{children}</> : <Navigate to="/login" />;
 };
 
 function App() {
-  const { setCountry, setCurrency, country, currency } = useAuthStore();
+  const { setCountry, setCurrency, user } = useAuthStore();
+  const country = user?.country;
+  const currency = user?.currency;
 
   useEffect(() => {
     const detectLocation = async () => {
       // Only detect if not already set or if it's the default
-      if (country === 'PT' && currency === 'EUR') {
+      if ((!country || country === 'PT') && (!currency || currency === 'EUR')) {
         try {
           const response = await axios.get('https://ipapi.co/json/');
           if (response.data && response.data.country_code) {
@@ -43,7 +45,7 @@ function App() {
       }
     };
     detectLocation();
-  }, []);
+  }, [user]);
 
   return (
     <Router>
