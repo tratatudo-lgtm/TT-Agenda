@@ -16,6 +16,7 @@ import Services from './pages/Services';
 import Agenda from './pages/Agenda';
 import Settings from './pages/Settings';
 import Support from './pages/Support';
+import Help from './pages/Help';
 
 const PrivateRoute = ({ children }: { children: React.ReactNode }) => {
   const user = useAuthStore((state) => state.user);
@@ -77,6 +78,7 @@ function App() {
           <Route path="clients" element={<Clients />} />
           <Route path="services" element={<Services />} />
           <Route path="support" element={<Support />} />
+          <Route path="help" element={<Help />} />
           <Route path="settings" element={<Settings />} />
         </Route>
 

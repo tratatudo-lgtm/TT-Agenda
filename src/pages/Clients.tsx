@@ -9,7 +9,8 @@ import {
   Calendar,
   Filter,
   X,
-  Loader2
+  Loader2,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import api from '../lib/api';
@@ -43,7 +44,7 @@ export default function Clients() {
   const fetchCustomers = async () => {
     try {
       const response = await api.get('/api/client/customers');
-      setCustomers(response.data);
+      setCustomers(response.data || []);
     } catch (error) {
       console.error('Error fetching customers:', error);
     } finally {
@@ -97,6 +98,22 @@ export default function Clients() {
     setIsModalOpen(true);
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const res = await api.get('/api/client/customers/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `clientes-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Exportação concluída!');
+    } catch (error) {
+      toast.error('Erro ao exportar clientes.');
+    }
+  };
+
   const filteredCustomers = customers.filter(c => 
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     c.phone_e164.includes(searchTerm) ||
@@ -110,13 +127,22 @@ export default function Clients() {
           <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Clientes</h2>
           <p className="text-slate-500 font-medium">Gerencie a sua base de dados de clientes.</p>
         </div>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100"
-        >
-          <Plus size={20} />
-          Novo Cliente
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleExportCSV}
+            className="bg-white border border-slate-200 text-slate-600 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-all"
+          >
+            <Download size={20} />
+            Exportar CSV
+          </button>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100"
+          >
+            <Plus size={20} />
+            Novo Cliente
+          </button>
+        </div>
       </header>
 
       {/* Search and Filter */}
@@ -141,19 +167,7 @@ export default function Clients() {
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {loading ? (
           Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="bg-white p-6 rounded-[32px] border border-slate-200 animate-pulse">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 bg-slate-100 rounded-2xl"></div>
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 bg-slate-100 rounded w-3/4"></div>
-                  <div className="h-3 bg-slate-100 rounded w-1/2"></div>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="h-3 bg-slate-100 rounded"></div>
-                <div className="h-3 bg-slate-100 rounded w-5/6"></div>
-              </div>
-            </div>
+            <div key={i} className="bg-white p-6 rounded-[32px] border border-slate-200 animate-pulse h-64"></div>
           ))
         ) : filteredCustomers.length > 0 ? (
           filteredCustomers.map((customer) => (
@@ -209,7 +223,13 @@ export default function Clients() {
                 <button className="flex-1 bg-slate-50 hover:bg-slate-100 text-slate-900 py-3 rounded-xl font-bold text-sm transition-all">
                   Ver Histórico
                 </button>
-                <button className="px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 py-3 rounded-xl font-bold text-sm transition-all">
+                <button 
+                  onClick={() => {
+                    // Navigate to agenda with client selected (could be implemented with state)
+                    toast.success(`Agendar para ${customer.name}`);
+                  }}
+                  className="px-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 py-3 rounded-xl font-bold text-sm transition-all"
+                >
                   Agendar
                 </button>
               </div>

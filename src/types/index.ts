@@ -44,6 +44,24 @@ export interface Ticket {
   created_at: string;
 }
 
+export interface Staff {
+  id: string;
+  name: string;
+  email: string;
+  phone_e164: string;
+  color: string;
+  status: 'active' | 'inactive';
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: 'appointment_reminder' | 'appointment_status' | 'ticket_update';
+  read: boolean;
+  created_at: string;
+}
+
 export interface BusinessSettings {
   company_name: string;
   country: string;

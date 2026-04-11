@@ -7,15 +7,21 @@ import {
   Building2,
   Save,
   Loader2,
-  ExternalLink
+  ExternalLink,
+  Globe,
+  Users as StaffIcon,
+  Plus,
+  Trash2,
+  Edit2,
+  Download
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import api from '../lib/api';
-import { BusinessSettings } from '../types';
+import { BusinessSettings, Staff } from '../types';
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../stores/useAuthStore';
 import { getDefaultCurrency } from '../utils/format';
-import { Globe } from 'lucide-react';
+import StaffModal from '../components/StaffModal';
 
 const daysOfWeek = [
   { id: 'monday', label: 'Segunda-feira' },
@@ -28,36 +34,52 @@ const daysOfWeek = [
 ];
 
 export default function Settings() {
-  const { user, setCountry: setGlobalCountry, setCurrency: setGlobalCurrency } = useAuthStore();
+  const { user, setCountry: setGlobalCountry, setCurrency: setGlobalCurrency, staffList, setStaffList } = useAuthStore();
   const [settings, setSettings] = useState<BusinessSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  // Staff management
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [staffSubmitting, setStaffSubmitting] = useState(false);
 
   useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await api.get('/api/client/settings');
-        setSettings(response.data);
-      } catch (error) {
-        console.error('Error fetching settings:', error);
-        // Mock default settings if API fails for demo
-        setSettings({
-          company_name: user?.company_name || '',
-          country: user?.country || 'PT',
-          currency: user?.currency || 'EUR',
-          working_hours: daysOfWeek.reduce((acc, day) => ({
-            ...acc,
-            [day.id]: { open: '09:00', close: '19:00', closed: day.id === 'sunday' }
-          }), {}),
-          appointment_interval: 30,
-          notifications_enabled: true,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchSettings();
+    fetchStaff();
   }, [user]);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await api.get('/api/client/settings');
+      setSettings(response.data);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      // Fallback
+      setSettings({
+        company_name: user?.company_name || '',
+        country: user?.country || 'PT',
+        currency: user?.currency || 'EUR',
+        working_hours: daysOfWeek.reduce((acc, day) => ({
+          ...acc,
+          [day.id]: { open: '09:00', close: '19:00', closed: day.id === 'sunday' }
+        }), {}),
+        appointment_interval: 30,
+        notifications_enabled: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchStaff = async () => {
+    try {
+      const response = await api.get('/api/client/staff');
+      setStaffList(response.data || []);
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,14 +87,74 @@ export default function Settings() {
 
     setSaving(true);
     try {
-      await api.put('/api/client/settings', settings);
+      const res = await api.put('/api/client/settings', settings);
       setGlobalCountry(settings.country);
       setGlobalCurrency(settings.currency);
       toast.success('Definições guardadas com sucesso!');
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erro ao guardar definições');
+      console.error('Save error:', error);
+      const msg = error.response?.data?.error || 'Erro ao guardar definições no servidor.';
+      toast.error(msg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      const res = await api.post('/api/stripe/create-customer-portal-session');
+      if (res.data?.url) {
+        window.location.href = res.data.url;
+      }
+    } catch (error) {
+      toast.error('Erro ao abrir portal de faturação. Tente novamente mais tarde.');
+    }
+  };
+
+  const handleExportCSV = async () => {
+    try {
+      const res = await api.get('/api/client/customers/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `clientes-${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Exportação concluída!');
+    } catch (error) {
+      toast.error('Erro ao exportar clientes.');
+    }
+  };
+
+  const handleStaffSubmit = async (data: any) => {
+    setStaffSubmitting(true);
+    try {
+      if (editingStaff) {
+        await api.put(`/api/client/staff/${editingStaff.id}`, data);
+        toast.success('Funcionário atualizado!');
+      } else {
+        await api.post('/api/client/staff', data);
+        toast.success('Funcionário adicionado!');
+      }
+      setIsStaffModalOpen(false);
+      setEditingStaff(null);
+      fetchStaff();
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || 'Erro ao processar funcionário');
+    } finally {
+      setStaffSubmitting(false);
+    }
+  };
+
+  const handleDeleteStaff = async (id: string) => {
+    if (!window.confirm('Remover este funcionário?')) return;
+    try {
+      await api.delete(`/api/client/staff/${id}`);
+      toast.success('Funcionário removido');
+      fetchStaff();
+    } catch (error) {
+      toast.error('Erro ao remover funcionário');
     }
   };
 
@@ -104,19 +186,28 @@ export default function Settings() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-10">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Definições</h2>
           <p className="text-slate-500 font-medium">Gerencie as configurações do seu negócio.</p>
         </div>
-        <button 
-          onClick={handleSave}
-          disabled={saving}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50"
-        >
-          {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-          Guardar Alterações
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={handleExportCSV}
+            className="bg-white border border-slate-200 text-slate-600 px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-all"
+          >
+            <Download size={20} />
+            Exportar Clientes
+          </button>
+          <button 
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100 disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+            Guardar Alterações
+          </button>
+        </div>
       </header>
 
       <div className="grid gap-8">
@@ -149,37 +240,78 @@ export default function Settings() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Intervalo entre Agendamentos</label>
-                <select 
-                  value={settings?.appointment_interval || 30}
-                  onChange={(e) => setSettings(s => s ? { ...s, appointment_interval: parseInt(e.target.value) } : null)}
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all appearance-none"
-                >
-                  <option value={15}>15 minutos</option>
-                  <option value={30}>30 minutos</option>
-                  <option value={45}>45 minutos</option>
-                  <option value={60}>60 minutos</option>
-                </select>
+          </div>
+        </section>
+
+        {/* Staff Section */}
+        <section className="bg-white rounded-[32px] border border-slate-200 shadow-sm overflow-hidden">
+          <div className="p-8 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white rounded-lg border border-slate-200 text-slate-600">
+                <StaffIcon size={20} />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm font-bold text-slate-700 uppercase tracking-widest">Notificações WhatsApp</label>
-                <div className="flex items-center gap-3 h-[58px] px-4 bg-slate-50 rounded-xl border border-slate-200">
-                  <input 
-                    type="checkbox" 
-                    id="notif"
-                    checked={settings?.notifications_enabled || false}
-                    onChange={(e) => setSettings(s => s ? { ...s, notifications_enabled: e.target.checked } : null)}
-                    className="w-5 h-5 rounded text-indigo-600 focus:ring-indigo-500"
-                  />
-                  <label htmlFor="notif" className="text-slate-700 font-medium cursor-pointer flex items-center gap-2">
-                    <Bell size={18} className="text-slate-400" />
-                    Ativar lembretes automáticos
-                  </label>
-                </div>
-              </div>
+              <h3 className="text-lg font-bold text-slate-900">Equipa</h3>
             </div>
+            <button
+              onClick={() => {
+                if (staffList.length >= 3) {
+                  toast.error('Limite de 3 funcionários atingido no plano Profissional.');
+                  return;
+                }
+                setEditingStaff(null);
+                setIsStaffModalOpen(true);
+              }}
+              disabled={staffList.length >= 3}
+              className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg font-bold hover:bg-indigo-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Plus size={18} />
+              Adicionar
+            </button>
+          </div>
+          <div className="p-8">
+            {staffList.length > 0 ? (
+              <div className="grid gap-4">
+                {staffList.map((staff) => (
+                  <div key={staff.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold" style={{ backgroundColor: staff.color }}>
+                        {staff.name[0]}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900">{staff.name}</h4>
+                        <p className="text-xs text-slate-500 font-medium">{staff.email}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => {
+                          setEditingStaff(staff);
+                          setIsStaffModalOpen(true);
+                        }}
+                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-white rounded-lg transition-all"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteStaff(staff.id)}
+                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-slate-400 font-medium">
+                Nenhum funcionário adicionado.
+              </div>
+            )}
+            {staffList.length >= 3 && (
+              <p className="mt-4 text-xs text-amber-600 font-bold bg-amber-50 p-3 rounded-xl border border-amber-100">
+                Atingiu o limite de 3 funcionários do seu plano. Faça upgrade para adicionar mais.
+              </p>
+            )}
           </div>
         </section>
 
@@ -290,7 +422,10 @@ export default function Settings() {
               <h3 className="text-3xl font-bold">Plano Profissional</h3>
               <p className="text-slate-400 font-medium">Próximo pagamento: € 29.00 em 01 de Maio, 2026</p>
             </div>
-            <button className="bg-white text-slate-900 px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-100 transition-all">
+            <button 
+              onClick={handleManageSubscription}
+              className="bg-white text-slate-900 px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-100 transition-all"
+            >
               Gerir Assinatura
               <ExternalLink size={18} />
             </button>
@@ -298,6 +433,14 @@ export default function Settings() {
           <div className="absolute -top-10 -left-10 w-40 h-40 bg-indigo-500/10 rounded-full blur-3xl"></div>
         </section>
       </div>
+
+      <StaffModal 
+        isOpen={isStaffModalOpen}
+        onClose={() => setIsStaffModalOpen(false)}
+        onSubmit={handleStaffSubmit}
+        initialData={editingStaff}
+        submitting={staffSubmitting}
+      />
     </div>
   );
 }

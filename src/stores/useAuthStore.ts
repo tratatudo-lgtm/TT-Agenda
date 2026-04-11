@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { Staff } from '../types';
 
 interface Client {
   id: number;
@@ -11,9 +12,11 @@ interface Client {
 
 interface AuthState {
   user: Client | null;
+  staffList: Staff[];
   setUser: (user: Client | null) => void;
   setCountry: (country: string) => void;
   setCurrency: (currency: string) => void;
+  setStaffList: (staff: Staff[]) => void;
   logout: () => void;
 }
 
@@ -21,6 +24,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       user: null,
+      staffList: [],
       setUser: (user) => set({ user }),
       setCountry: (country) => set((state) => ({
         user: state.user ? { ...state.user, country } : null
@@ -28,7 +32,8 @@ export const useAuthStore = create<AuthState>()(
       setCurrency: (currency) => set((state) => ({
         user: state.user ? { ...state.user, currency } : null
       })),
-      logout: () => set({ user: null }),
+      setStaffList: (staffList) => set({ staffList }),
+      logout: () => set({ user: null, staffList: [] }),
     }),
     { name: 'tt-agenda-auth' }
   )

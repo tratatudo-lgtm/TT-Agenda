@@ -8,14 +8,15 @@ import {
   Plus,
   Clock,
   ChevronRight,
-  MessageCircle
+  MessageCircle,
+  Loader2
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import api from '../lib/api';
 import { Appointment, Customer, Service } from '../types';
 import { format, isToday, isAfter } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/useAuthStore';
 import { formatCurrency } from '../utils/format';
 
@@ -44,6 +45,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const user = useAuthStore((state) => state.user);
   const currency = user?.currency || 'EUR';
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -53,9 +55,9 @@ export default function Dashboard() {
           api.get('/api/client/customers'),
           api.get('/api/client/services'),
         ]);
-        setAppointments(appsRes.data);
-        setCustomers(custRes.data);
-        setServices(servRes.data);
+        setAppointments(appsRes.data || []);
+        setCustomers(custRes.data || []);
+        setServices(servRes.data || []);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {
@@ -79,13 +81,13 @@ export default function Dashboard() {
           <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Painel de Controlo</h2>
           <p className="text-slate-500 font-medium">Bem-vindo ao seu centro de operações.</p>
         </div>
-        <Link 
-          to="/agenda"
+        <button 
+          onClick={() => navigate('/agenda')}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100"
         >
           <Plus size={20} />
           Novo Agendamento
-        </Link>
+        </button>
       </header>
 
       {/* Metrics Grid */}
@@ -128,7 +130,10 @@ export default function Dashboard() {
 
           <div className="bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-sm">
             {loading ? (
-              <div className="p-12 text-center text-slate-400">Carregando...</div>
+              <div className="p-12 text-center text-slate-400 flex flex-col items-center gap-3">
+                <Loader2 className="animate-spin" size={32} />
+                Carregando dados...
+              </div>
             ) : upcomingList.length > 0 ? (
               <div className="divide-y divide-slate-100">
                 {upcomingList.map((app) => (
@@ -171,7 +176,7 @@ export default function Dashboard() {
           <div className="bg-slate-900 text-white p-8 rounded-[32px] relative overflow-hidden">
             <div className="relative z-10">
               <h3 className="text-xl font-bold mb-2">Suporte Prioritário</h3>
-              <p className="text-slate-400 text-sm mb-6">Precisa de ajuda com a plataforma? A nossa equipa está disponível.</p>
+              <p className="text-slate-400 text-sm mb-6 leading-relaxed">Precisa de ajuda com a plataforma? A nossa equipa está disponível.</p>
               <Link 
                 to="/support"
                 className="inline-flex items-center gap-2 bg-white text-slate-900 px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-100 transition-all"
