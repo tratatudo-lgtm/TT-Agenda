@@ -68,6 +68,7 @@ export default function Agenda() {
     setLoading(true);
     setError(null);
     try {
+      console.log('Fetching appointments for staff:', selectedStaffId);
       const res = await api.get('/api/client/appointments', {
         params: { staff_id: selectedStaffId !== 'all' ? selectedStaffId : undefined }
       });
@@ -76,6 +77,7 @@ export default function Agenda() {
         title: `${apt.customer?.name || 'Cliente'} - ${apt.service?.name || 'Serviço'}`,
         start: new Date(apt.start_at),
         end: new Date(apt.end_at || apt.start_at),
+        staff_id: apt.staff_id, // Ensure staff_id is at top level for style getter
         resource: apt,
         color: apt.staff?.color || '#4f46e5'
       }));
@@ -92,12 +94,14 @@ export default function Agenda() {
   const onSubmit = async (data: AppointmentForm) => {
     setSubmitting(true);
     try {
+      console.log('Creating appointment:', data);
       await api.post('/api/client/appointments', data);
       toast.success('Agendamento criado com sucesso!');
       setShowModal(false);
       reset();
       fetchAppointments();
     } catch (error: any) {
+      console.error('Error creating appointment:', error);
       toast.error(error.response?.data?.error || 'Erro ao criar agendamento');
     } finally {
       setSubmitting(false);
@@ -105,11 +109,12 @@ export default function Agenda() {
   };
 
   const eventStyleGetter = (event: any) => {
+    const staff = staffList.find(s => s.id === event.staff_id);
     return {
       style: {
-        backgroundColor: event.color,
+        backgroundColor: staff?.color || event.color || '#4f46e5',
         borderRadius: '8px',
-        opacity: 0.8,
+        opacity: 0.9,
         color: 'white',
         border: 'none',
         display: 'block'

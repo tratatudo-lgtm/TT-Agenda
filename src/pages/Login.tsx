@@ -29,7 +29,8 @@ export default function Login() {
   });
 
   const handleSendOtp = async () => {
-    if (!phone || phone.length < 10) {
+    console.log('Attempting to send OTP for phone:', phone);
+    if (!phone || phone.length < 8) {
       toast.error('Por favor, insira um número de telefone válido');
       return;
     }
@@ -38,31 +39,43 @@ export default function Login() {
     try {
       const cleanPhone = phone.replace(/\D/g, '');
       const phone_e164 = `+${cleanPhone}`;
-      await api.post('/api/auth/send-otp', { phone_e164 });
+      console.log('Payload for send-otp:', { phone_e164 });
+      
+      const response = await api.post('/api/auth/send-otp', { phone_e164 });
+      console.log('Send OTP response:', response.data);
+      
       setStep('otp');
       toast.success('Código enviado para o seu WhatsApp!');
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erro ao enviar código');
+      console.error('Error sending OTP:', error);
+      const serverError = error.response?.data?.error || 'Erro ao enviar código';
+      toast.error(serverError);
     } finally {
       setLoading(false);
     }
   };
 
   const handleVerifyOtp = async (data: LoginForm) => {
+    console.log('Attempting to verify OTP:', data.code);
     setLoading(true);
     try {
       const cleanPhone = phone.replace(/\D/g, '');
       const phone_e164 = `+${cleanPhone}`;
+      console.log('Payload for verify-otp:', { phone_e164, code: data.code });
+
       const response = await api.post('/api/auth/verify-otp', {
         phone_e164,
         code: data.code,
       });
+      console.log('Verify OTP response:', response.data);
       
       setUser(response.data.client);
       toast.success('Login realizado com sucesso!');
       navigate('/dashboard');
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Código inválido');
+      console.error('Error verifying OTP:', error);
+      const serverError = error.response?.data?.error || 'Código inválido';
+      toast.error(serverError);
     } finally {
       setLoading(false);
     }

@@ -9,6 +9,7 @@ import { Staff } from '../types';
 const staffSchema = z.object({
   name: z.string().min(3, 'Nome deve ter pelo menos 3 caracteres'),
   email: z.string().email('Email inválido'),
+  phone_e164: z.string().min(9, 'Telefone inválido'),
   color: z.string().regex(/^#[0-9A-F]{6}$/i, 'Cor inválida'),
 });
 
@@ -101,6 +102,19 @@ export default function StaffModal({ isOpen, onClose, onSubmit, initialData, sub
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                 />
                 {errors.email && <p className="text-red-500 text-xs font-bold">{errors.email.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                  <User size={16} /> Telefone
+                </label>
+                <input 
+                  {...register('phone_e164')}
+                  type="text" 
+                  placeholder="+351912345678"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-900 font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                />
+                {errors.phone_e164 && <p className="text-red-500 text-xs font-bold">{errors.phone_e164.message}</p>}
               </div>
 
               <div className="space-y-4">

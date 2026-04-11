@@ -83,11 +83,17 @@ export default function Settings() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!settings) return;
+    if (!settings) {
+      toast.error('Definições não carregadas corretamente.');
+      return;
+    }
 
     setSaving(true);
     try {
+      console.log('Saving settings with payload:', settings);
       const res = await api.put('/api/client/settings', settings);
+      console.log('Save settings response:', res.data);
+      
       setGlobalCountry(settings.country);
       setGlobalCurrency(settings.currency);
       toast.success('Definições guardadas com sucesso!');
@@ -102,28 +108,44 @@ export default function Settings() {
 
   const handleManageSubscription = async () => {
     try {
+      console.log('Creating customer portal session...');
       const res = await api.post('/api/stripe/create-customer-portal-session');
       if (res.data?.url) {
+        console.log('Redirecting to Stripe portal:', res.data.url);
         window.location.href = res.data.url;
+      } else {
+        throw new Error('URL do portal não retornada');
       }
     } catch (error) {
+      console.error('Stripe portal error:', error);
       toast.error('Erro ao abrir portal de faturação. Tente novamente mais tarde.');
     }
   };
 
   const handleExportCSV = async () => {
     try {
-      const res = await api.get('/api/client/customers/export', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      toast.loading('A gerar exportação...', { id: 'export' });
+      const res = await api.get('/api/client/customers');
+      const clients = res.data || [];
+      
+      const csvContent = [
+        ['Nome', 'Telefone', 'Email'],
+        ...clients.map((c: any) => [c.name, c.phone_e164, c.email || ''])
+      ].map(row => row.join(',')).join('\n');
+      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `clientes-${new Date().toISOString().split('T')[0]}.csv`);
       document.body.appendChild(link);
       link.click();
-      link.remove();
-      toast.success('Exportação concluída!');
+      document.body.removeChild(link);
+      
+      toast.success('Clientes exportados com sucesso!', { id: 'export' });
     } catch (error) {
-      toast.error('Erro ao exportar clientes.');
+      console.error('Export error:', error);
+      toast.error('Erro ao exportar clientes.', { id: 'export' });
     }
   };
 
