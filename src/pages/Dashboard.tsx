@@ -1,150 +1,190 @@
 import React, { useEffect, useState } from 'react';
-import api from '../lib/api';
 import { 
   Calendar, 
   Users, 
   Scissors, 
-  TrendingUp,
+  TrendingUp, 
+  ArrowUpRight, 
+  Plus,
   Clock,
   ChevronRight,
-  Plus,
-  Megaphone
+  MessageCircle
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import api from '../lib/api';
+import { Appointment } from '../types';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 
-interface Stats {
-  appointments: number;
-  customers: number;
-  services: number;
-  revenue: number;
-}
+const MetricCard = ({ icon: Icon, label, value, trend, color }: any) => (
+  <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
+    <div className="flex justify-between items-start mb-4">
+      <div className={`p-3 rounded-2xl ${color}`}>
+        <Icon size={24} />
+      </div>
+      {trend && (
+        <span className="flex items-center gap-1 text-emerald-600 text-sm font-bold bg-emerald-50 px-2 py-1 rounded-lg">
+          <TrendingUp size={14} />
+          {trend}
+        </span>
+      )}
+    </div>
+    <p className="text-slate-500 font-medium text-sm mb-1">{label}</p>
+    <h3 className="text-2xl font-bold text-slate-900">{value}</h3>
+  </div>
+);
 
 export default function Dashboard() {
-  const [stats, setStats] = useState<Stats | null>(null);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function fetchStats() {
+    const fetchData = async () => {
       try {
-        // Mocking stats for now since backend only has counts
-        const [appRes, custRes, servRes] = await Promise.all([
-          api.get('/appointments'),
-          api.get('/customers'),
-          api.get('/services')
-        ]);
-        
-        setStats({
-          appointments: appRes.data.length,
-          customers: custRes.data.length,
-          services: servRes.data.length,
-          revenue: 0
-        });
-      } catch (err) {
-        console.error(err);
+        const response = await api.get('/api/appointments');
+        setAppointments(response.data);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
       } finally {
         setLoading(false);
       }
-    }
-    fetchStats();
+    };
+    fetchData();
   }, []);
-
-  const cards = [
-    { label: 'Agendamentos', value: stats?.appointments || 0, icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Clientes', value: stats?.customers || 0, icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { label: 'Serviços', value: stats?.services || 0, icon: Scissors, color: 'text-purple-600', bg: 'bg-purple-50' },
-    { label: 'Faturamento', value: `R$ ${stats?.revenue || 0}`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-  ];
-
-  if (loading) return (
-    <div className="animate-pulse space-y-10">
-      <div className="h-10 w-64 bg-gray-200 rounded-2xl" />
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {[1,2,3,4].map(i => <div key={i} className="h-32 bg-gray-200 rounded-[32px]" />)}
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-10">
-      <header className="flex items-center justify-between">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-gray-900 tracking-tight">Dashboard</h2>
-          <p className="text-gray-500 font-medium">Visão geral do seu negócio hoje.</p>
+          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Painel de Controlo</h2>
+          <p className="text-slate-500 font-medium">Bem-vindo ao seu centro de operações.</p>
         </div>
         <Link 
-          to="/agenda" 
-          className="bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
+          to="/agenda"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-100"
         >
           <Plus size={20} />
           Novo Agendamento
         </Link>
       </header>
 
+      {/* Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {cards.map((card, i) => (
-          <motion.div
-            key={card.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="bg-white p-6 rounded-[32px] border border-gray-100 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <div className={`${card.bg} ${card.color} p-3 rounded-2xl`}>
-                <card.icon size={24} />
-              </div>
-              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">+12%</span>
-            </div>
-            <p className="text-sm font-bold text-gray-400 uppercase tracking-wider">{card.label}</p>
-            <h3 className="text-2xl font-black text-gray-900 mt-1">{card.value}</h3>
-          </motion.div>
-        ))}
+        <MetricCard 
+          icon={Calendar} 
+          label="Agendamentos Hoje" 
+          value="12" 
+          trend="+15%" 
+          color="bg-indigo-50 text-indigo-600" 
+        />
+        <MetricCard 
+          icon={Users} 
+          label="Total de Clientes" 
+          value="1,284" 
+          trend="+4%" 
+          color="bg-emerald-50 text-emerald-600" 
+        />
+        <MetricCard 
+          icon={Scissors} 
+          label="Serviços Ativos" 
+          value="24" 
+          color="bg-amber-50 text-amber-600" 
+        />
+        <MetricCard 
+          icon={TrendingUp} 
+          label="Faturação Prevista" 
+          value="€ 4,250" 
+          trend="+12%" 
+          color="bg-rose-50 text-rose-600" 
+        />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white rounded-[32px] border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-8 border-b border-gray-50 flex items-center justify-between">
-            <h3 className="text-xl font-bold text-gray-900">Próximos Agendamentos</h3>
-            <Link to="/agenda" className="text-sm font-bold text-indigo-600 hover:text-indigo-700">Ver todos</Link>
+      <div className="grid lg:grid-cols-3 gap-8">
+        {/* Upcoming Appointments */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-bold text-slate-900">Próximos Agendamentos</h3>
+            <Link to="/agenda" className="text-indigo-600 font-bold text-sm flex items-center gap-1 hover:underline">
+              Ver todos <ChevronRight size={16} />
+            </Link>
           </div>
-          <div className="divide-y divide-gray-50">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="p-6 flex items-center gap-4 hover:bg-gray-50 transition-colors cursor-pointer">
-                <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-400">
-                  <Clock size={20} />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-bold text-gray-900">Cliente Exemplo {i}</p>
-                  <p className="text-xs font-medium text-gray-400">Corte de Cabelo • 14:30</p>
-                </div>
-                <ChevronRight size={20} className="text-gray-300" />
+
+          <div className="bg-white rounded-[32px] border border-slate-200 overflow-hidden shadow-sm">
+            {loading ? (
+              <div className="p-12 text-center text-slate-400">Carregando...</div>
+            ) : appointments.length > 0 ? (
+              <div className="divide-y divide-slate-100">
+                {appointments.slice(0, 5).map((app) => (
+                  <div key={app.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-600 font-bold">
+                        {app.customer?.name?.[0] || 'C'}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-900">{app.customer?.name || 'Cliente'}</h4>
+                        <p className="text-sm text-slate-500 font-medium">{app.service?.name || 'Serviço'}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-2 text-slate-900 font-bold mb-1">
+                        <Clock size={16} className="text-slate-400" />
+                        {format(new Date(app.start_at), 'HH:mm')}
+                      </div>
+                      <p className="text-xs text-slate-500 font-medium">
+                        {format(new Date(app.start_at), "dd 'de' MMM", { locale: ptBR })}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            ) : (
+              <div className="p-12 text-center">
+                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
+                  <Calendar size={32} />
+                </div>
+                <h4 className="font-bold text-slate-900 mb-1">Sem agendamentos próximos</h4>
+                <p className="text-slate-500 text-sm">Os seus novos agendamentos aparecerão aqui.</p>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="bg-white rounded-[32px] p-8 border border-gray-100 shadow-sm">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Atalhos Rápidos</h3>
-          <div className="space-y-4">
-            <button className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 transition-all group">
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-gray-400 group-hover:text-indigo-600 shadow-sm">
-                <Users size={20} />
-              </div>
-              <span className="font-bold text-sm">Novo Cliente</span>
-            </button>
-            <button className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 transition-all group">
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-gray-400 group-hover:text-indigo-600 shadow-sm">
-                <Scissors size={20} />
-              </div>
-              <span className="font-bold text-sm">Novo Serviço</span>
-            </button>
-            <button className="w-full flex items-center gap-4 p-4 rounded-2xl bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 transition-all group">
-              <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-gray-400 group-hover:text-indigo-600 shadow-sm">
-                <Megaphone size={20} />
-              </div>
-              <span className="font-bold text-sm">Criar Campanha</span>
-            </button>
+        {/* Quick Actions & Support */}
+        <div className="space-y-8">
+          <div className="bg-slate-900 text-white p-8 rounded-[32px] relative overflow-hidden">
+            <div className="relative z-10">
+              <h3 className="text-xl font-bold mb-2">Suporte Prioritário</h3>
+              <p className="text-slate-400 text-sm mb-6">Precisa de ajuda com a plataforma? A nossa equipa está disponível.</p>
+              <Link 
+                to="/support"
+                className="inline-flex items-center gap-2 bg-white text-slate-900 px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-100 transition-all"
+              >
+                <MessageCircle size={18} />
+                Abrir Ticket
+              </Link>
+            </div>
+            <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
+          </div>
+
+          <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm">
+            <h3 className="text-lg font-bold text-slate-900 mb-6">Dicas de Crescimento</h3>
+            <div className="space-y-6">
+              {[
+                { title: 'Ative lembretes WhatsApp', desc: 'Reduza faltas em até 40%.' },
+                { title: 'Crie pacotes de serviços', desc: 'Aumente o ticket médio.' },
+              ].map((tip, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 shrink-0">
+                    <ArrowUpRight size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-900 text-sm">{tip.title}</h4>
+                    <p className="text-slate-500 text-xs mt-1">{tip.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

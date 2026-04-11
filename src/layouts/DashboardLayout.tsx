@@ -5,30 +5,32 @@ import {
   Calendar, 
   Users, 
   Scissors, 
-  Megaphone, 
   Settings, 
-  LogOut,
-  Menu,
+  LifeBuoy, 
+  LogOut, 
+  Menu, 
   X,
-  Bell
+  Bell,
+  Search,
+  User as UserIcon
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { cn } from '../lib/utils';
+import { useAuthStore } from '../stores/useAuthStore';
+import { motion, AnimatePresence } from 'motion/react';
 
 const navItems = [
-  { name: 'Dashboard', path: '/', icon: LayoutDashboard },
-  { name: 'Agenda', path: '/agenda', icon: Calendar },
-  { name: 'Clientes', path: '/clientes', icon: Users },
-  { name: 'Serviços', path: '/servicos', icon: Scissors },
-  { name: 'Campanhas', path: '/campanhas', icon: Megaphone },
-  { name: 'Configurações', path: '/configuracoes', icon: Settings },
+  { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard' },
+  { icon: Calendar, label: 'Agenda', path: '/agenda' },
+  { icon: Users, label: 'Clientes', path: '/clients' },
+  { icon: Scissors, label: 'Serviços', path: '/services' },
+  { icon: LifeBuoy, label: 'Suporte', path: '/support' },
+  { icon: Settings, label: 'Definições', path: '/settings' },
 ];
 
 export default function DashboardLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
 
   const handleLogout = () => {
     logout();
@@ -36,26 +38,34 @@ export default function DashboardLayout() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex">
+    <div className="min-h-screen bg-slate-50 flex">
       {/* Mobile Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsSidebarOpen(false)}
+            className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
 
       {/* Sidebar */}
-      <aside className={cn(
-        "fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-100 z-50 transition-transform lg:translate-x-0 lg:static lg:block shadow-sm",
-        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
-      )}>
-        <div className="h-full flex flex-col">
-          <div className="p-6 mb-4">
-            <h1 className="text-2xl font-black text-indigo-600 tracking-tighter">TT-AGENDA</h1>
+      <aside className={`
+        fixed inset-y-0 left-0 w-72 bg-white border-r border-slate-200 z-50 transition-transform duration-300 lg:translate-x-0 lg:static
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="h-full flex flex-col p-6">
+          <div className="flex items-center gap-2 text-xl font-bold tracking-tighter text-slate-900 mb-10">
+            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <Scissors className="text-white" size={18} />
+            </div>
+            TT-Agenda
           </div>
 
-          <nav className="flex-1 px-4 space-y-1">
+          <nav className="flex-1 space-y-1">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path;
               return (
@@ -63,70 +73,78 @@ export default function DashboardLayout() {
                   key={item.path}
                   to={item.path}
                   onClick={() => setIsSidebarOpen(false)}
-                  className={cn(
-                    "flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all",
-                    isActive 
-                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100" 
-                      : "text-gray-400 hover:bg-gray-50 hover:text-gray-900"
-                  )}
+                  className={`
+                    flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all
+                    ${isActive 
+                      ? 'bg-indigo-50 text-indigo-600 shadow-sm shadow-indigo-100' 
+                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}
+                  `}
                 >
                   <item.icon size={20} />
-                  {item.name}
+                  {item.label}
                 </Link>
               );
             })}
           </nav>
 
-          <div className="p-4 border-t border-gray-50">
+          <div className="pt-6 border-t border-slate-100">
             <button
               onClick={handleLogout}
-              className="flex items-center gap-3 w-full px-4 py-3 rounded-2xl text-sm font-bold text-red-500 hover:bg-red-50 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-500 hover:bg-red-50 hover:text-red-600 transition-all"
             >
               <LogOut size={20} />
-              Sair da conta
+              Terminar Sessão
             </button>
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-20 bg-white border-b border-gray-100 flex items-center justify-between px-6 lg:px-10">
-          <button 
-            className="p-2 text-gray-500 lg:hidden"
-            onClick={() => setIsSidebarOpen(true)}
-          >
-            <Menu size={24} />
-          </button>
-          
-          <div className="flex-1" />
-
-          <div className="flex items-center gap-6">
-            <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />
+        <header className="h-20 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-30">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsSidebarOpen(true)}
+              className="p-2 text-slate-500 hover:bg-slate-50 rounded-lg lg:hidden"
+            >
+              <Menu size={24} />
             </button>
-            <div className="h-8 w-px bg-gray-100" />
+            <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl border border-slate-200 w-80">
+              <Search size={18} className="text-slate-400" />
+              <input 
+                type="text" 
+                placeholder="Procurar agendamentos..." 
+                className="bg-transparent border-none outline-none text-sm w-full"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button className="p-2 text-slate-500 hover:bg-slate-50 rounded-xl relative">
+              <Bell size={20} />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-indigo-500 rounded-full border-2 border-white"></span>
+            </button>
+            
+            <div className="h-8 w-px bg-slate-200 mx-2"></div>
+
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-gray-900 leading-none mb-1">{user?.name}</p>
-                <p className="text-xs font-medium text-gray-400">{user?.phone_e164}</p>
+                <p className="text-sm font-bold text-slate-900 leading-none">{user?.company_name || 'O Meu Negócio'}</p>
+                <p className="text-xs font-medium text-slate-500 mt-1">Administrador</p>
               </div>
-              <div className="w-10 h-10 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-sm">
-                {user?.name?.[0] || 'T'}
+              <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 border border-slate-200">
+                <UserIcon size={20} />
               </div>
             </div>
           </div>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 lg:p-10">
-          <div className="max-w-7xl mx-auto">
-            <Outlet />
-          </div>
-        </main>
-      </div>
+        <div className="flex-1 overflow-y-auto p-6 lg:p-10">
+          <Outlet />
+        </div>
+      </main>
     </div>
   );
 }
