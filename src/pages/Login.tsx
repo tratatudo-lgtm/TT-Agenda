@@ -68,6 +68,7 @@ export default function Login() {
         code: data.code,
       });
       console.log('Verify OTP response:', response.data);
+      localStorage.setItem('token', response.data.token);
       
       setUser(response.data.client);
       toast.success('Login realizado com sucesso!');
